@@ -1,0 +1,12 @@
+elevenlabs-speech-to-text
+gpt-4o-transcribe
+gpt-4o-transcribe-diarize
+latest_long
+latest_short
+medical_conversation
+medical_dictation
+phone_call
+qwen3-asr-flash
+telephony
+telephony_short
+whisper-1

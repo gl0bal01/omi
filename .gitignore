@@ -1,0 +1,38 @@
+# Binaries
+/omi
+/omi.exe
+bin/
+dist/
+
+# Test + coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Logs
+*.log
+
+# Local config
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Go
+vendor/
+go.work
+go.work.sum
+
+# OMC tooling state (local-only orchestration cache)
+.omc/
