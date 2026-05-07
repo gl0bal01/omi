@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -39,6 +40,9 @@ func TestSaveLoad_RoundTrip(t *testing.T) {
 }
 
 func TestSave_FilePerm0600(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX file mode bits not meaningful on Windows")
+	}
 	dir := setupTempXDG(t)
 	c := &Config{APIKey: "sk-test"}
 	if err := c.Save(); err != nil {
@@ -55,6 +59,9 @@ func TestSave_FilePerm0600(t *testing.T) {
 }
 
 func TestSave_DirPerm0700_OnFirstUse(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX directory mode bits not meaningful on Windows")
+	}
 	dir := setupTempXDG(t)
 	// Pre-condition: omi/ does not exist yet.
 	omiDir := filepath.Join(dir, "omi")

@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -91,6 +92,9 @@ func TestStore_ListIsCopy(t *testing.T) {
 }
 
 func TestStore_SavePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX file/directory mode bits not meaningful on Windows")
+	}
 	dir := t.TempDir()
 	p := filepath.Join(dir, "omi", "sessions.json")
 	s, err := NewAt(p)

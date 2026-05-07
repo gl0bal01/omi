@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -241,6 +242,9 @@ func TestLoadFromPath_OverrideReplaces(t *testing.T) {
 }
 
 func TestLoadFromPath_MalformedFallsBackToEmbedded(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("override resolution uses HOME; os.UserHomeDir on Windows reads USERPROFILE instead")
+	}
 	resetForTest(t)
 	defer resetForTest(t)
 
