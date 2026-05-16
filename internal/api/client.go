@@ -264,4 +264,3 @@ func debugBodySummary(req *http.Request) string {
 	}
 	return fmt.Sprintf("bytes=%d preview=%q", len(data), normalized)
 }
-
