@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gl0bal01/omi/internal/closeutil"
+	"github.com/gl0bal01/omi/internal/redact"
 )
 
 const DefaultBaseURL = "https://api.1min.ai"
@@ -230,7 +230,7 @@ func debugHeaders(h http.Header) string {
 	for _, k := range keys {
 		v := strings.Join(h[k], ",")
 		if textproto.CanonicalMIMEHeaderKey(k) == "Api-Key" {
-			v = maskSecret(v)
+			v = redact.APIKey(v)
 		}
 		parts = append(parts, k+"="+v)
 	}
@@ -265,16 +265,3 @@ func debugBodySummary(req *http.Request) string {
 	return fmt.Sprintf("bytes=%d preview=%q", len(data), normalized)
 }
 
-func maskSecret(s string) string {
-	if len(s) <= 7 {
-		if s == "" {
-			return ""
-		}
-		return "***"
-	}
-	var b bytes.Buffer
-	b.WriteString(s[:3])
-	b.WriteString("...")
-	b.WriteString(s[len(s)-4:])
-	return b.String()
-}

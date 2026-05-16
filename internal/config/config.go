@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/gl0bal01/omi/internal/redact"
 )
 
 type Config struct {
@@ -48,17 +50,9 @@ func Load() (*Config, error) {
 	return c, nil
 }
 
-// MaskAPIKey returns a redacted form of the API key suitable for display.
-// Empty input returns empty; keys shorter than 7 chars return "***".
-// Otherwise returns the first 3 chars + "..." + last 4 chars.
+// MaskAPIKey returns a display-safe form of an API key. See redact.APIKey.
 func MaskAPIKey(key string) string {
-	if len(key) < 7 {
-		if key == "" {
-			return ""
-		}
-		return "***"
-	}
-	return key[:3] + "..." + key[len(key)-4:]
+	return redact.APIKey(key)
 }
 
 func (c *Config) Save() error {

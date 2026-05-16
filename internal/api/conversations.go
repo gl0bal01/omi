@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/gl0bal01/omi/internal/closeutil"
 )
@@ -100,7 +101,7 @@ func alternateConversationType(convType string) string {
 // Treats 200/204/404 as success (idempotent). 401 surfaces as *Error so
 // callers can distinguish auth failures. Not retried.
 func (c *Client) DeleteConversation(ctx context.Context, uuid string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.BaseURL+"/api/conversations/"+uuid, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.BaseURL+"/api/conversations/"+url.PathEscape(uuid), nil)
 	if err != nil {
 		return err
 	}

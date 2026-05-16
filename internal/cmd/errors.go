@@ -7,10 +7,19 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gl0bal01/omi/internal/api"
 )
+
+// effectiveTimeout returns the configured --timeout, or api.DefaultTimeout when unset.
+func effectiveTimeout() time.Duration {
+	if runOpts != nil && runOpts.timeout > 0 {
+		return runOpts.timeout
+	}
+	return api.DefaultTimeout
+}
 
 // UsageError indicates a user-input or flag-validation problem. Maps to exit 2.
 type UsageError struct{ Msg string }
@@ -31,11 +40,11 @@ func TranslateAPIError(err error) error {
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		return &RuntimeError{Msg: "omi: request timed out after 60s"}
+		return &RuntimeError{Msg: fmt.Sprintf("omi: request timed out after %s", effectiveTimeout())}
 	}
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
-		return &RuntimeError{Msg: "omi: request timed out after 60s"}
+		return &RuntimeError{Msg: fmt.Sprintf("omi: request timed out after %s", effectiveTimeout())}
 	}
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {

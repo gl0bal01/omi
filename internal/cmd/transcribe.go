@@ -12,33 +12,69 @@ import (
 
 const defaultTranscribeModel = "qwen3-asr-flash"
 
-var knownTranscribeModels = []string{
-	"qwen3-asr-flash",
-	"telephony",
-	"telephony_short",
-	"elevenlabs-speech-to-text",
-	"gpt-4o-transcribe",
-	"gpt-4o-transcribe-diarize",
-	"whisper-1",
-	"phone_call",
-	"latest_short",
-	"latest_long",
-	"medical_conversation",
-	"medical_dictation",
+// transcribeEntry is the single source of truth for a speech-to-text model:
+// a primary alias, optional extra aliases that map to the same Model, the
+// raw upstream Model id, and short Notes shown by `omi transcribe models`.
+type transcribeEntry struct {
+	Alias   string
+	Aliases []string
+	Model   string
+	Notes   string
 }
 
-var transcribeAliases = map[string]string{
-	"asr":                   "qwen3-asr-flash",
-	"asr-fast":              "qwen3-asr-flash",
-	"asr-telephony":         "telephony",
-	"asr-telephony-short":   "telephony_short",
-	"asr-openai":            "gpt-4o-transcribe",
-	"asr-diarize":           "gpt-4o-transcribe-diarize",
-	"asr-whisper":           "whisper-1",
-	"asr-eleven":            "elevenlabs-speech-to-text",
-	"asr-phone":             "phone_call",
-	"asr-medical":           "medical_conversation",
-	"asr-medical-dictation": "medical_dictation",
+// transcribeEntries drives `omi transcribe`, `omi transcribe models`, alias
+// resolution, and shell completion. Add a new speech model here and every
+// surface picks it up.
+var transcribeEntries = []transcribeEntry{
+	{Alias: "asr", Aliases: []string{"asr-fast"}, Model: "qwen3-asr-flash", Notes: "default balanced ASR"},
+	{Alias: "asr-telephony", Model: "telephony", Notes: "call-center audio"},
+	{Alias: "asr-telephony-short", Model: "telephony_short", Notes: "short telephony clips"},
+	{Alias: "asr-openai", Model: "gpt-4o-transcribe", Notes: "OpenAI ASR"},
+	{Alias: "asr-diarize", Model: "gpt-4o-transcribe-diarize", Notes: "speaker diarization"},
+	{Alias: "asr-whisper", Model: "whisper-1", Notes: "legacy compatible"},
+	{Alias: "asr-eleven", Model: "elevenlabs-speech-to-text", Notes: "ElevenLabs ASR"},
+	{Alias: "asr-phone", Model: "phone_call", Notes: "phone-call optimized"},
+	{Alias: "asr-medical", Model: "medical_conversation", Notes: "medical conversation"},
+	{Alias: "asr-medical-dictation", Model: "medical_dictation", Notes: "medical dictation"},
+}
+
+// rawTranscribeModels lists upstream model ids that have no shorter alias.
+var rawTranscribeModels = []string{"latest_short", "latest_long"}
+
+var (
+	knownTranscribeModels = buildKnownTranscribeModels()
+	transcribeAliases     = buildTranscribeAliases()
+)
+
+func buildKnownTranscribeModels() []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(transcribeEntries)+len(rawTranscribeModels))
+	for _, e := range transcribeEntries {
+		if _, ok := seen[e.Model]; ok {
+			continue
+		}
+		seen[e.Model] = struct{}{}
+		out = append(out, e.Model)
+	}
+	for _, m := range rawTranscribeModels {
+		if _, ok := seen[m]; ok {
+			continue
+		}
+		seen[m] = struct{}{}
+		out = append(out, m)
+	}
+	return out
+}
+
+func buildTranscribeAliases() map[string]string {
+	out := make(map[string]string, len(transcribeEntries)*2)
+	for _, e := range transcribeEntries {
+		out[e.Alias] = e.Model
+		for _, a := range e.Aliases {
+			out[a] = e.Model
+		}
+	}
+	return out
 }
 
 func newTranscribeCmd() *cobra.Command {
@@ -94,17 +130,9 @@ func newTranscribeModelsCmd() *cobra.Command {
 				Model string `json:"model"`
 				Notes string `json:"notes"`
 			}
-			rows := []row{
-				{Alias: "asr", Model: "qwen3-asr-flash", Notes: "default balanced ASR"},
-				{Alias: "asr-telephony", Model: "telephony", Notes: "call-center audio"},
-				{Alias: "asr-telephony-short", Model: "telephony_short", Notes: "short telephony clips"},
-				{Alias: "asr-openai", Model: "gpt-4o-transcribe", Notes: "OpenAI ASR"},
-				{Alias: "asr-diarize", Model: "gpt-4o-transcribe-diarize", Notes: "speaker diarization"},
-				{Alias: "asr-whisper", Model: "whisper-1", Notes: "legacy compatible"},
-				{Alias: "asr-eleven", Model: "elevenlabs-speech-to-text", Notes: "ElevenLabs ASR"},
-				{Alias: "asr-phone", Model: "phone_call", Notes: "phone-call optimized"},
-				{Alias: "asr-medical", Model: "medical_conversation", Notes: "medical conversation"},
-				{Alias: "asr-medical-dictation", Model: "medical_dictation", Notes: "medical dictation"},
+			rows := make([]row, 0, len(transcribeEntries))
+			for _, e := range transcribeEntries {
+				rows = append(rows, row{Alias: e.Alias, Model: e.Model, Notes: e.Notes})
 			}
 			if asJSON {
 				return printJSON(cmd.OutOrStdout(), map[string]any{

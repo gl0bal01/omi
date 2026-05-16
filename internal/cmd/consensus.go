@@ -159,7 +159,7 @@ func chatOnceForConsensus(ctx context.Context, client *api.Client, modelID, prom
 	}
 	defer closeutil.Quiet(body)
 	var out bytes.Buffer
-	if err := consumeStream(body, true, &out, &out); err != nil {
+	if err := consumeStream(body, true, &out, io.Discard); err != nil {
 		return "", err
 	}
 	return out.String(), nil

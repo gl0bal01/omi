@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-05-16
+
+### Fixed
+- `omi consensus`: per-model answers no longer corrupted by mid-stream error text. `consensusAnswer` now writes stderr to `io.Discard` instead of the same buffer that captures the answer fed to the synthesis model.
+- Timeout error message now reflects the configured `--timeout` value (or `api.DefaultTimeout`) instead of a hardcoded `60s` literal.
+- `DeleteConversation` wraps the conversation UUID with `url.PathEscape` so an unexpected character cannot reshape the request path.
+
+### Changed
+- `Transcribe` cascade reduced from three POSTs (`audioUrl` → `audio` → `path`) to two (`audioUrl` → `audio`). One fallback is sufficient for backend-field compatibility, and `/api/features` is non-idempotent so additional retries only enlarge the failure surface.
+- Speech-to-text model metadata is now a single `transcribeEntries` registry plus `rawTranscribeModels` for ids without an alias. The legacy slice and map are derived at package init from this source of truth.
+- Secret masking is centralized in a new `internal/redact` package. `internal/api` now calls `redact.APIKey` instead of its own `maskSecret`; `config.MaskAPIKey` delegates to the same implementation.
+- REPL `bufio.Scanner` initial buffer raised from 1 KiB to 64 KiB so multi-line paste avoids several immediate grow cycles. The 1 MiB ceiling is unchanged.
+
 ## [0.1.0] - 2026-05-07
 
 ### Added
@@ -46,4 +59,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for i in $(seq 1 10); do /usr/bin/time -f '%e' ./bin/omi --version 2>&1 >/dev/null; done | sort -n | sed -n '5p'
   ```
 
+[0.1.1]: https://github.com/gl0bal01/omi/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gl0bal01/omi/releases/tag/v0.1.0

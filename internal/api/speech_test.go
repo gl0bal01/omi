@@ -118,14 +118,10 @@ func TestTranscribe_FallbackPromptObjectKeys(t *testing.T) {
 			if _, ok := po["audio"]; !ok {
 				t.Fatalf("call2 promptObject=%v, want audio", po)
 			}
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			_, _ = io.WriteString(w, "still bad")
-		default:
-			if _, ok := po["path"]; !ok {
-				t.Fatalf("call3 promptObject=%v, want path", po)
-			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = io.WriteString(w, `{"result":{"response":"ok via path"}}`)
+			_, _ = io.WriteString(w, `{"result":{"response":"ok via audio"}}`)
+		default:
+			t.Fatalf("unexpected extra call #%d; cascade should stop after 2 attempts", calls)
 		}
 	}))
 	defer srv.Close()
@@ -135,10 +131,10 @@ func TestTranscribe_FallbackPromptObjectKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Transcribe: %v", err)
 	}
-	if got != "ok via path" {
+	if got != "ok via audio" {
 		t.Fatalf("text=%q", got)
 	}
-	if calls != 3 {
-		t.Fatalf("calls=%d want 3", calls)
+	if calls != 2 {
+		t.Fatalf("calls=%d want 2", calls)
 	}
 }

@@ -13,8 +13,10 @@ import (
 	"github.com/gl0bal01/omi/internal/closeutil"
 )
 
-// speechRequest mirrors /api/features with field-name compatibility for
-// providers that expect "audioUrl", "audio", or "path".
+const featureTypeSpeechToText = "SPEECH_TO_TEXT"
+
+// speechRequest mirrors /api/features. Two upstream field-name shapes are
+// supported: "audioUrl" (current) and "audio" (legacy fallback).
 type speechRequest struct {
 	Type         string             `json:"type"`
 	Model        string             `json:"model"`
@@ -24,15 +26,15 @@ type speechRequest struct {
 type speechPromptObject struct {
 	AudioURL       string `json:"audioUrl,omitempty"`
 	Audio          string `json:"audio,omitempty"`
-	Path           string `json:"path,omitempty"`
 	ResponseFormat string `json:"response_format,omitempty"`
 }
 
-// Transcribe sends a SPEECH_TO_TEXT request against /api/features for an
-// already-uploaded audio asset and returns the transcript text.
+// Transcribe POSTs SPEECH_TO_TEXT to /api/features for an already-uploaded
+// audio asset. One retry uses the legacy "audio" field on 400/422. No
+// further retries — /api/features is non-idempotent.
 func (c *Client) Transcribe(ctx context.Context, assetPath, model string) (string, error) {
 	text, err := c.transcribeOnce(ctx, speechRequest{
-		Type:  "SPEECH_TO_TEXT",
+		Type:  featureTypeSpeechToText,
 		Model: model,
 		PromptObject: speechPromptObject{
 			AudioURL:       assetPath,
@@ -43,31 +45,17 @@ func (c *Client) Transcribe(ctx context.Context, assetPath, model string) (strin
 		return text, nil
 	}
 	var apiErr *Error
-	if errors.As(err, &apiErr) && (apiErr.Status == http.StatusBadRequest || apiErr.Status == http.StatusUnprocessableEntity) {
-		text, err2 := c.transcribeOnce(ctx, speechRequest{
-			Type:  "SPEECH_TO_TEXT",
-			Model: model,
-			PromptObject: speechPromptObject{
-				Audio:          assetPath,
-				ResponseFormat: "text",
-			},
-		})
-		if err2 == nil {
-			return text, nil
-		}
-		if errors.As(err2, &apiErr) && (apiErr.Status == http.StatusBadRequest || apiErr.Status == http.StatusUnprocessableEntity) {
-			return c.transcribeOnce(ctx, speechRequest{
-				Type:  "SPEECH_TO_TEXT",
-				Model: model,
-				PromptObject: speechPromptObject{
-					Path:           assetPath,
-					ResponseFormat: "text",
-				},
-			})
-		}
-		return "", err2
+	if !errors.As(err, &apiErr) || (apiErr.Status != http.StatusBadRequest && apiErr.Status != http.StatusUnprocessableEntity) {
+		return "", err
 	}
-	return "", err
+	return c.transcribeOnce(ctx, speechRequest{
+		Type:  featureTypeSpeechToText,
+		Model: model,
+		PromptObject: speechPromptObject{
+			Audio:          assetPath,
+			ResponseFormat: "text",
+		},
+	})
 }
 
 func (c *Client) transcribeOnce(ctx context.Context, body speechRequest) (string, error) {

@@ -92,7 +92,7 @@ func dispatchEmpty(ctx context.Context, f *chatFlags, in *os.File, out, errOut i
 
 	// TTY: REPL loop.
 	scanner := bufio.NewScanner(in)
-	scanner.Buffer(make([]byte, 1024), 1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 	for {
 		_, _ = fmt.Fprint(out, "> ")
 		if !scanner.Scan() {
