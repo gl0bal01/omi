@@ -9,8 +9,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// validConfigKeys is the closed set accepted by `omi config set|get|list`.
+// validConfigKeys is the closed set accepted by `omi config set|get|list`,
+// in stable display order for `omi config list`.
 var validConfigKeys = []string{"api_key", "model", "code_model", "web", "mix", "num_sites", "max_words"}
+
+var validConfigKeySet = func() map[string]struct{} {
+	m := make(map[string]struct{}, len(validConfigKeys))
+	for _, k := range validConfigKeys {
+		m[k] = struct{}{}
+	}
+	return m
+}()
 
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -123,12 +132,8 @@ func newConfigListCmd() *cobra.Command {
 }
 
 func isValidConfigKey(k string) bool {
-	for _, v := range validConfigKeys {
-		if v == k {
-			return true
-		}
-	}
-	return false
+	_, ok := validConfigKeySet[k]
+	return ok
 }
 
 // getConfigField returns the stringified value plus whether the field is "set"

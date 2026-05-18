@@ -1,13 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"text/tabwriter"
 	"time"
 
-	"github.com/gl0bal01/omi/internal/closeutil"
 	"github.com/gl0bal01/omi/internal/config"
 	"github.com/gl0bal01/omi/internal/models"
 	"github.com/spf13/cobra"
@@ -80,7 +79,7 @@ func newDoctorCmd() *cobra.Command {
 			checks = append(checks, doctorCheck{"endpoint_transcribe", "PASS", fmt.Sprintf("/api/features type=SPEECH_TO_TEXT uses model=%s", transcribeResolved)})
 
 			if live && apiKey != "" {
-				ok, detail := runLivePing(apiKey)
+				ok, detail := runLivePing(cmd.Context(), apiKey)
 				checks = append(checks, doctorCheck{"live_api", status(ok), detail})
 				if !ok {
 					failures++
@@ -141,21 +140,18 @@ func isKnownTranscribeModel(model string) bool {
 	return false
 }
 
-func runLivePing(apiKey string) (bool, string) {
+func runLivePing(ctx context.Context, apiKey string) (bool, string) {
+	pingCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
 	client := newAPIClient(apiKey)
-	hc := *client.HTTP
-	hc.Timeout = 8 * time.Second
-	req, _ := http.NewRequest(http.MethodGet, client.BaseURL+"/models?feature=UNIFY_CHAT_WITH_AI", nil)
-	req.Header.Set("API-KEY", apiKey)
-	resp, err := hc.Do(req)
+	code, err := client.Ping(pingCtx)
 	if err != nil {
 		return false, "connectivity failed: " + err.Error()
 	}
-	defer closeutil.Quiet(resp.Body)
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return true, fmt.Sprintf("reachable (%d)", resp.StatusCode)
+	if code >= 200 && code < 300 {
+		return true, fmt.Sprintf("reachable (%d)", code)
 	}
-	return false, fmt.Sprintf("unexpected status %d", resp.StatusCode)
+	return false, fmt.Sprintf("unexpected status %d", code)
 }
 
 func status(ok bool) string {

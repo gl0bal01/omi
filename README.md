@@ -35,14 +35,6 @@ omi consensus -m mini,claude,gemini-pro --synth-model best "Should we ship today
 go install github.com/gl0bal01/omi/cmd/omi@latest
 ```
 
-### `curl | sh`
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/gl0bal01/omi/main/install.sh | sh
-```
-
-> TODO: `install.sh` ships in v0.2.
-
 ### Manual download
 
 Grab the archive for your platform from the [GitHub Releases](https://github.com/gl0bal01/omi/releases) page.

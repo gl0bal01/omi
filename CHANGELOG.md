@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-05-18
+
+### Fixed
+- `omi doctor --live` now routes through `Client.do`, picking up the retry policy, API-KEY auth, debug-HTTP logging, and 64 KiB error-body cap. Previous implementation hand-rolled a one-shot `http.Client` copy that duplicated auth and bypassed every cross-cutting concern.
+- Streaming HTTP client (`StreamHTTP`) now uses a hardened `http.Transport` that bounds the pre-stream phases: 30s dial, 10s TLS handshake, 30s response-header (time-to-first-byte). A server that accepts the connection but never writes can no longer hang the client indefinitely when the parent context has no deadline. Body reads after streaming begins continue to rely on the caller's context, so long-running SSE responses are not killed mid-stream.
+
+### Added
+- `api.Client.Ping(ctx)` issues a lightweight `GET /models?feature=UNIFY_CHAT_WITH_AI` through the standard `do` path and returns the response status. Used by `omi doctor --live`.
+- Unit tests for `internal/redact` covering empty, short, normal, byte-indexed unicode, and middle-leak protection.
+
+### Changed
+- `isValidConfigKey` now does an O(1) map lookup instead of scanning `validConfigKeys` each call.
+- README install section drops the `curl | sh` placeholder. `omi` is distributed as a single static Go binary via `go install` or the GitHub Releases archives; an install shell wrapper added no value.
+
 ## [0.1.1] - 2026-05-16
 
 ### Fixed
@@ -59,5 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for i in $(seq 1 10); do /usr/bin/time -f '%e' ./bin/omi --version 2>&1 >/dev/null; done | sort -n | sed -n '5p'
   ```
 
+[0.1.2]: https://github.com/gl0bal01/omi/releases/tag/v0.1.2
 [0.1.1]: https://github.com/gl0bal01/omi/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gl0bal01/omi/releases/tag/v0.1.0

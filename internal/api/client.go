@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/textproto"
 	"sort"
@@ -64,10 +66,30 @@ func NewClient(apiKey, baseURL string, timeout time.Duration) *Client {
 		APIKey:     apiKey,
 		BaseURL:    baseURL,
 		HTTP:       &http.Client{Timeout: timeout},
-		StreamHTTP: &http.Client{},
+		StreamHTTP: &http.Client{Transport: newStreamTransport()},
 		Debug:      false,
 		DebugOut:   io.Discard,
 		Backoffs:   []time.Duration{100 * time.Millisecond, 300 * time.Millisecond},
+	}
+}
+
+// newStreamTransport bounds the pre-stream phases (dial, TLS, time-to-first-byte)
+// so a hung server cannot block forever. No overall request timeout: that would
+// kill long-running SSE responses mid-stream; body reads rely on the caller's
+// context for cancellation.
+func newStreamTransport() *http.Transport {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	}
 }
 
@@ -137,6 +159,21 @@ func (c *Client) do(req *http.Request, stream bool) (*http.Response, error) {
 		}
 	}
 	return resp, err
+}
+
+// Ping verifies API reachability and credentials by issuing a lightweight
+// GET against the model catalog. Returns the response status code.
+func (c *Client) Ping(ctx context.Context) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/models?feature=UNIFY_CHAT_WITH_AI", nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := c.do(req, false)
+	if err != nil {
+		return 0, err
+	}
+	defer closeutil.Quiet(resp.Body)
+	return resp.StatusCode, nil
 }
 
 // parseRetryAfter parses the Retry-After header per RFC 7231: integer seconds
