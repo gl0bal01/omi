@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -65,11 +66,59 @@ func NewClient(apiKey, baseURL string, timeout time.Duration) *Client {
 	return &Client{
 		APIKey:     apiKey,
 		BaseURL:    baseURL,
-		HTTP:       &http.Client{Timeout: timeout},
-		StreamHTTP: &http.Client{Transport: newStreamTransport()},
+		HTTP:       &http.Client{Timeout: timeout, Transport: newTransport(), CheckRedirect: checkRedirect},
+		StreamHTTP: &http.Client{Transport: newStreamTransport(), CheckRedirect: checkRedirect},
 		Debug:      false,
 		DebugOut:   io.Discard,
 		Backoffs:   []time.Duration{100 * time.Millisecond, 300 * time.Millisecond},
+	}
+}
+
+// maxRedirects bounds redirect chains even for same-host hops.
+const maxRedirects = 10
+
+// checkRedirect refuses any cross-host or non-HTTPS redirect so the custom
+// API-KEY credential header can never be replayed to a host other than the
+// configured API endpoint. Go's stdlib only strips a fixed allowlist of
+// sensitive headers (Authorization, Cookie, ...) across hosts; a custom header
+// like API-KEY is otherwise re-attached when following a 3xx, which a hostile
+// or compromised upstream could exploit to exfiltrate the key. CheckRedirect
+// runs BEFORE the redirected request is sent, so the key never leaves the box.
+func checkRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	if len(via) >= maxRedirects {
+		return fmt.Errorf("omi: stopped after %d redirects", maxRedirects)
+	}
+	if req.URL.Host != via[0].URL.Host || req.URL.Scheme != "https" {
+		req.Header.Del("API-KEY") // defense in depth before refusing
+		return fmt.Errorf("omi: refusing redirect to %s://%s (cross-host or non-HTTPS)", req.URL.Scheme, req.URL.Host)
+	}
+	return nil
+}
+
+// tlsConfig pins the TLS floor. Certificate verification stays at the secure
+// default — InsecureSkipVerify is never set.
+func tlsConfig() *tls.Config {
+	return &tls.Config{MinVersion: tls.VersionTLS12}
+}
+
+// newTransport builds the non-streaming transport with stdlib-like defaults
+// plus an explicit TLS floor and proxy-from-environment.
+func newTransport() *http.Transport {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig(),
 	}
 }
 
@@ -90,6 +139,7 @@ func newStreamTransport() *http.Transport {
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 30 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig(),
 	}
 }
 

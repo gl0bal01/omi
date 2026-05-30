@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/gl0bal01/omi/internal/config"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // validConfigKeys is the closed set accepted by `omi config set|get|list`,
@@ -36,8 +40,12 @@ func newConfigCmd() *cobra.Command {
 
 func newConfigSetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:           "set <key> <value>",
-		Short:         "Set a config value",
+		Use:   "set <key> <value>",
+		Short: "Set a config value",
+		Long: "Set a config value.\n\n" +
+			"For api_key, pass \"-\" as the value to read the key from stdin " +
+			"(or a no-echo prompt on a terminal) so the secret never appears in " +
+			"the process list or shell history:\n\n    omi config set api_key -",
 		Args:          cobra.MaximumNArgs(2),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -48,6 +56,19 @@ func newConfigSetCmd() *cobra.Command {
 			key, value := args[0], args[1]
 			if !isValidConfigKey(key) {
 				return &UsageError{Msg: fmt.Sprintf("omi: unknown config key '%s' (valid: %s)", key, strings.Join(validConfigKeys, ", "))}
+			}
+
+			// `omi config set api_key -` reads the secret from stdin instead of
+			// argv, keeping it out of the process list and shell history.
+			if key == "api_key" && value == "-" {
+				secret, err := readSecretValue(cmd, "api_key")
+				if err != nil {
+					return &RuntimeError{Msg: "omi: read api_key: " + err.Error()}
+				}
+				if secret == "" {
+					return &UsageError{Msg: "omi: empty api_key from stdin"}
+				}
+				value = secret
 			}
 
 			cfg, err := config.Load()
@@ -193,6 +214,26 @@ func setConfigField(c *config.Config, key, value string) error {
 		c.MaxWords = n
 	}
 	return nil
+}
+
+// readSecretValue reads a secret from stdin. On an interactive terminal it uses
+// a no-echo prompt; otherwise it reads the first line of stdin (pipe/file).
+func readSecretValue(cmd *cobra.Command, label string) (string, error) {
+	in := cmd.InOrStdin()
+	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Enter %s: ", label)
+		b, err := term.ReadPassword(int(f.Fd()))
+		_, _ = fmt.Fprintln(cmd.ErrOrStderr())
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(b)), nil
+	}
+	line, err := bufio.NewReader(in).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	return strings.TrimSpace(line), nil
 }
 
 func parseBool(v string) (bool, error) {

@@ -7,10 +7,18 @@ package session
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/gl0bal01/omi/internal/closeutil"
 )
+
+// maxSessionBytes bounds the sessions file read so a malformed or hostile file
+// cannot exhaust memory during JSON parsing.
+const maxSessionBytes = 1 << 20
 
 // Store is an in-memory map of session name → conversation UUID, with
 // load/save against a JSON file. Callers must call Save() to persist mutations.
@@ -43,12 +51,20 @@ func New() (*Store, error) {
 // NewAt loads the store from a given path. Used by tests.
 func NewAt(path string) (*Store, error) {
 	s := &Store{path: path, Sessions: map[string]string{}}
-	data, err := os.ReadFile(path) // #nosec G304 -- path is the CLI session store path or an explicit test path.
+	f, err := os.Open(path) // #nosec G304 -- path is the CLI session store path or an explicit test path.
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return s, nil
 		}
 		return nil, err
+	}
+	defer closeutil.Quiet(f)
+	data, err := io.ReadAll(io.LimitReader(f, maxSessionBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxSessionBytes {
+		return nil, fmt.Errorf("omi: session file %s exceeds %d bytes", path, maxSessionBytes)
 	}
 	if len(data) == 0 {
 		return s, nil
@@ -112,8 +128,29 @@ func (s *Store) Save() error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(s.path, data, 0o600); err != nil {
+	return atomicWrite0600(dir, s.path, data)
+}
+
+// atomicWrite0600 writes data to a fresh 0600 temp file in dir, then atomically
+// renames it over dest — avoiding the truncate-then-chmod window of
+// os.WriteFile, torn writes on crash, and writes through a symlinked dest.
+func atomicWrite0600(dir, dest string, data []byte) error {
+	f, err := os.CreateTemp(dir, ".omi-*.tmp") // CreateTemp uses O_EXCL and 0600
+	if err != nil {
 		return err
 	}
-	return os.Chmod(s.path, 0o600)
+	tmp := f.Name()
+	defer func() { _ = os.Remove(tmp) }() // no-op once renamed
+	if err := f.Chmod(0o600); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dest)
 }

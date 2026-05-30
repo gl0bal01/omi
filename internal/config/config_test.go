@@ -104,9 +104,10 @@ func TestMaskAPIKey(t *testing.T) {
 	}{
 		{"", ""},
 		{"abc", "***"},
-		{"abcdef", "***"},         // 6 chars: still short
-		{"abcdefg", "abc...defg"}, // 7 chars: exactly threshold
-		{"sk-abc12345", "sk-...2345"},
+		{"abcdef", "***"},             // 6 chars: short
+		{"abcdefg", "***"},            // 7 chars: below threshold, fully masked
+		{"abcdefghij", "***"},         // 10 chars: below threshold
+		{"sk-abc12345", "sk-...2345"}, // 11 chars: exactly threshold
 		{"sk-abcd1234", "sk-...1234"},
 	}
 	for _, tc := range cases {

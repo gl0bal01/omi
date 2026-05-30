@@ -189,6 +189,10 @@ func loadDefault() (map[string]Entry, error) {
 		if _, statErr := os.Stat(override); statErr == nil {
 			r, perr := loadFromPath(override)
 			if perr == nil {
+				// The override FULLY replaces the embedded registry and can
+				// silently re-route a trusted alias to a different model ID.
+				// Surface it so an unexpected remapping is visible.
+				_, _ = fmt.Fprintf(stderr, "omi: note: using models.json override (%d entries) from %s\n", len(r), override)
 				return r, nil
 			}
 			_, _ = fmt.Fprintf(stderr, "omi: warning: failed to parse models.json override: %v; falling back to embedded registry\n", perr)
@@ -197,11 +201,23 @@ func loadDefault() (map[string]Entry, error) {
 	return parseRegistry(embeddedJSON)
 }
 
+// maxRegistryBytes bounds the override file read so a malformed or hostile
+// models.json cannot exhaust memory during JSON parsing.
+const maxRegistryBytes = 4 << 20
+
 // loadFromPath is exported within-package for tests.
 func loadFromPath(path string) (map[string]Entry, error) {
-	data, err := os.ReadFile(path) // #nosec G304 -- path is the documented XDG models override or an explicit test path.
+	f, err := os.Open(path) // #nosec G304 -- path is the documented XDG models override or an explicit test path.
 	if err != nil {
 		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	data, err := io.ReadAll(io.LimitReader(f, maxRegistryBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxRegistryBytes {
+		return nil, fmt.Errorf("omi: models override %s exceeds %d bytes", path, maxRegistryBytes)
 	}
 	return parseRegistry(data)
 }

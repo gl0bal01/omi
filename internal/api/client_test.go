@@ -171,3 +171,32 @@ func TestDebugRequest_RedactsAPIKey(t *testing.T) {
 		t.Fatalf("debug logs missing body preview: %q", seen)
 	}
 }
+
+func TestClient_RefusesCrossHostRedirect(t *testing.T) {
+	var leaked atomic.Bool
+	dest := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("API-KEY") != "" {
+			leaked.Store(true)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer dest.Close()
+
+	src := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, dest.URL+"/collect", http.StatusFound)
+	}))
+	defer src.Close()
+
+	c := NewClient("super-secret-api-key", src.URL, time.Second)
+	req, _ := http.NewRequest(http.MethodGet, src.URL+"/start", nil)
+	resp, err := c.do(req, false)
+	if resp != nil {
+		closeutil.Quiet(resp.Body)
+	}
+	if err == nil {
+		t.Fatalf("expected cross-host redirect to be refused, got nil error")
+	}
+	if leaked.Load() {
+		t.Fatalf("API-KEY header leaked to cross-host redirect target")
+	}
+}

@@ -65,7 +65,7 @@ func newRootCmd(version string) *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&runOpts.verbose, "verbose", false, "print effective request settings")
 	cmd.PersistentFlags().BoolVar(&runOpts.explainDefaults, "explain-defaults", false, "explain how final defaults were selected")
 	cmd.PersistentFlags().BoolVar(&runOpts.debugHTTP, "debug-http", false, "print redacted HTTP request/response debug logs")
-	cmd.PersistentFlags().StringVar(&runOpts.apiKey, "api-key", "", "API key (overrides OMI_API_KEY env and config file)")
+	cmd.PersistentFlags().StringVar(&runOpts.apiKey, "api-key", "", "API key (overrides OMI_API_KEY env and config file; INSECURE: visible in process list and shell history — prefer OMI_API_KEY or 'omi config set api_key -')")
 	cmd.PersistentFlags().DurationVar(&runOpts.timeout, "timeout", 0, "request timeout for non-streaming calls (default 60s)")
 
 	_ = cmd.RegisterFlagCompletionFunc("model", chatModelCompletion)

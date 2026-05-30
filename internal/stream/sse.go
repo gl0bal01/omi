@@ -19,8 +19,20 @@ package stream
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strings"
+)
+
+const (
+	// maxStreamBytes caps the total SSE response read so a hostile or
+	// compromised upstream cannot stream unbounded bytes into memory.
+	maxStreamBytes = 64 << 20 // 64 MiB
+	// maxLineBytes caps a single SSE line so a server that omits newlines
+	// cannot grow the scanner buffer without limit.
+	maxLineBytes = 1 << 20 // 1 MiB
+	// maxEventBytes caps one event's accumulated data: payload.
+	maxEventBytes = 16 << 20 // 16 MiB
 )
 
 // Event is one decoded SSE event.
@@ -43,7 +55,11 @@ const (
 func Parse(r io.Reader, out chan<- Event) error {
 	defer close(out)
 
-	br := bufio.NewReader(r)
+	// Bound the total bytes read and the size of any single line so a hostile
+	// upstream cannot exhaust memory. ScanLines strips the trailing newline
+	// (and a trailing CR) for us.
+	sc := bufio.NewScanner(io.LimitReader(r, maxStreamBytes))
+	sc.Buffer(make([]byte, 0, 64*1024), maxLineBytes)
 	var (
 		evType  string
 		dataBuf strings.Builder
@@ -64,51 +80,51 @@ func Parse(r io.Reader, out chan<- Event) error {
 		return t == EventDone || t == EventError
 	}
 
-	for {
-		line, err := br.ReadString('\n')
-		// Process the line first (it may be a complete line without trailing
-		// newline at EOF), then handle any error.
-		if line != "" {
-			// Strip CR and LF.
-			line = strings.TrimRight(line, "\r\n")
-			if line == "" {
-				// Blank line: dispatch event.
-				if flush() {
-					return nil
-				}
-				continue
-			}
-			colon := strings.IndexByte(line, ':')
-			if colon < 0 {
-				// Malformed line — skip silently.
-				continue
-			}
-			field := line[:colon]
-			value := line[colon+1:]
-			// Per SSE spec: a single optional leading space after the colon
-			// is stripped.
-			if len(value) > 0 && value[0] == ' ' {
-				value = value[1:]
-			}
-			switch field {
-			case "event":
-				evType = value
-			case "data":
-				if dataBuf.Len() > 0 {
-					dataBuf.WriteByte('\n')
-				}
-				dataBuf.WriteString(value)
-			default:
-				// Comments (line starts with ':') and unknown fields are ignored.
-			}
-		}
-		if err != nil {
-			if err == io.EOF {
-				// Flush any pending event at EOF (no trailing blank line).
-				flush()
+	for sc.Scan() {
+		line := strings.TrimRight(sc.Text(), "\r")
+		if line == "" {
+			// Blank line: dispatch event.
+			if flush() {
 				return nil
 			}
-			return err
+			continue
+		}
+		colon := strings.IndexByte(line, ':')
+		if colon < 0 {
+			// Malformed line — skip silently.
+			continue
+		}
+		field := line[:colon]
+		value := line[colon+1:]
+		// Per SSE spec: a single optional leading space after the colon
+		// is stripped.
+		if len(value) > 0 && value[0] == ' ' {
+			value = value[1:]
+		}
+		switch field {
+		case "event":
+			evType = value
+		case "data":
+			add := len(value)
+			if dataBuf.Len() > 0 {
+				add++ // joining newline
+			}
+			if dataBuf.Len()+add > maxEventBytes {
+				return fmt.Errorf("sse: event exceeded %d bytes", maxEventBytes)
+			}
+			if dataBuf.Len() > 0 {
+				dataBuf.WriteByte('\n')
+			}
+			dataBuf.WriteString(value)
+		default:
+			// Comments (line starts with ':') and unknown fields are ignored.
 		}
 	}
+	if err := sc.Err(); err != nil {
+		// bufio.ErrTooLong (line exceeded maxLineBytes) surfaces here too.
+		return err
+	}
+	// Flush any pending event at EOF (no trailing blank line).
+	flush()
+	return nil
 }

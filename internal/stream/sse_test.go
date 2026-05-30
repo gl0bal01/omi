@@ -171,3 +171,27 @@ func (c *chunkReader) Read(p []byte) (int, error) {
 	c.off += n
 	return n, nil
 }
+
+func TestParse_RejectsOversizedLine(t *testing.T) {
+	// A single line far larger than maxLineBytes with no newline must error
+	// (bufio.ErrTooLong) instead of buffering unbounded into memory.
+	huge := "data: " + strings.Repeat("A", maxLineBytes+1)
+	ch := make(chan Event, 4)
+	if err := Parse(strings.NewReader(huge), ch); err == nil {
+		t.Fatalf("expected error for oversized line, got nil")
+	}
+}
+
+func TestParse_RejectsOversizedEvent(t *testing.T) {
+	// Many bounded data: lines whose joined size exceeds maxEventBytes must
+	// error rather than grow the event buffer without limit.
+	var b strings.Builder
+	line := "data: " + strings.Repeat("B", 64<<10) + "\n"
+	for b.Len() < maxEventBytes+(64<<10) {
+		b.WriteString(line)
+	}
+	ch := make(chan Event, 4)
+	if err := Parse(strings.NewReader(b.String()), ch); err == nil {
+		t.Fatalf("expected error for oversized event, got nil")
+	}
+}

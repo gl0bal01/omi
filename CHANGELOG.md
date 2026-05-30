@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-30
+
+### Security
+- HTTP clients now refuse cross-host and non-HTTPS redirects via `CheckRedirect` and strip the `API-KEY` header before refusing. Go's stdlib only drops a fixed allowlist of sensitive headers (`Authorization`, `Cookie`, ...) on cross-domain redirects; the custom `API-KEY` header is not on that list and would otherwise be re-attached when following a 3xx to an attacker-chosen host, leaking the credential.
+- SSE streaming is now bounded: 64 MiB total per response (`LimitReader`), 1 MiB per line (`bufio.Scanner` buffer cap), and 16 MiB per event. A hostile or compromised upstream can no longer exhaust client memory with an unterminated or oversized event.
+- Both HTTP transports pin an explicit TLS floor (`MinVersion: TLS 1.2`). Certificate verification remains at the secure default (`InsecureSkipVerify` is never set).
+- Config, session, and `models.json` reads are size-capped (1–4 MiB) before JSON unmarshal to bound memory on a malformed or hostile file.
+- `config.json` and `sessions.json` are written atomically (temp file + rename, `0600`, `O_EXCL`, no symlink-follow), eliminating the truncate-then-chmod window, torn writes on crash, and writes through a pre-planted symlink.
+- API-key masking threshold raised so short keys collapse to `***` instead of revealing the entire value; the long-key display format (`sk-...XXXX`) is unchanged.
+- The asset path returned by `omi upload` is passed through terminal sanitization before printing, closing the one upstream-string-to-stdout path that previously skipped it.
+- CI/CD supply chain hardened: GitHub Actions are pinned to commit SHAs (checkout, setup-go, goreleaser); `gosec` and `govulncheck` are pinned to fixed versions instead of `@latest`; CI is granted least-privilege `permissions: contents: read`.
+- Bumped `golang.org/x/sys` 0.43.0 → 0.45.0 to clear advisory GO-2026-5024.
+
+### Added
+- `omi config set api_key -` reads the API key from stdin (or a no-echo prompt on a terminal) so the secret never appears in the process list or shell history.
+- A stderr note is emitted when a `models.json` override is active, surfacing alias remapping that was previously silent.
+- Regression tests: cross-host redirect refusal (proves the API key does not leak), oversized SSE line/event rejection, and updated masking thresholds.
+
+### Changed
+- `--api-key` flag help now marks the flag as insecure (visible in process list and shell history) and points to `OMI_API_KEY` / `omi config set api_key -`.
+- `scripts/smoke.sh` enables `pipefail` (`-e` intentionally omitted so the assertion harness keeps tallying).
+
 ## [0.1.2] - 2026-05-18
 
 ### Fixed
@@ -73,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for i in $(seq 1 10); do /usr/bin/time -f '%e' ./bin/omi --version 2>&1 >/dev/null; done | sort -n | sed -n '5p'
   ```
 
+[0.2.0]: https://github.com/gl0bal01/omi/releases/tag/v0.2.0
 [0.1.2]: https://github.com/gl0bal01/omi/releases/tag/v0.1.2
 [0.1.1]: https://github.com/gl0bal01/omi/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gl0bal01/omi/releases/tag/v0.1.0

@@ -17,7 +17,11 @@
 #
 # Exit: 0 = all green, 1 = at least one failure, 2 = bad invocation.
 
+# -u: error on unset vars. -o pipefail: a failed command in a pipeline fails it.
+# -e is intentionally NOT set: run()/expect_*() return non-zero on a failed
+# assertion by design so the harness keeps going and prints a final tally.
 set -u
+set -o pipefail
 
 # --- Setup ---------------------------------------------------------------
 

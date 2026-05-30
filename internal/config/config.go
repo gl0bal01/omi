@@ -3,12 +3,20 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/gl0bal01/omi/internal/closeutil"
 	"github.com/gl0bal01/omi/internal/redact"
 )
+
+// maxConfigBytes bounds the config file read so a malformed or hostile file
+// cannot exhaust memory during JSON parsing. 1 MiB is far beyond any real
+// config.
+const maxConfigBytes = 1 << 20
 
 type Config struct {
 	APIKey    string `json:"api_key,omitempty"`
@@ -36,12 +44,20 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(p) // #nosec G304 -- path is the XDG/user config file chosen by the CLI runtime.
+	f, err := os.Open(p) // #nosec G304 -- path is the XDG/user config file chosen by the CLI runtime.
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &Config{}, nil
 		}
 		return nil, err
+	}
+	defer closeutil.Quiet(f)
+	data, err := io.ReadAll(io.LimitReader(f, maxConfigBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxConfigBytes {
+		return nil, fmt.Errorf("omi: config file %s exceeds %d bytes", p, maxConfigBytes)
 	}
 	c := &Config{}
 	if err := json.Unmarshal(data, c); err != nil {
@@ -68,8 +84,30 @@ func (c *Config) Save() error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(p, data, 0o600); err != nil {
+	return atomicWrite0600(dir, p, data)
+}
+
+// atomicWrite0600 writes data to a fresh 0600 temp file in dir, then atomically
+// renames it over dest. This avoids the truncate-then-chmod window of
+// os.WriteFile and never writes through a pre-planted symlink at dest (rename
+// replaces the symlink itself, not its target).
+func atomicWrite0600(dir, dest string, data []byte) error {
+	f, err := os.CreateTemp(dir, ".omi-*.tmp") // CreateTemp uses O_EXCL and 0600
+	if err != nil {
 		return err
 	}
-	return os.Chmod(p, 0o600)
+	tmp := f.Name()
+	defer func() { _ = os.Remove(tmp) }() // no-op once renamed
+	if err := f.Chmod(0o600); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dest)
 }

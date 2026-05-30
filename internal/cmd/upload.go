@@ -26,7 +26,10 @@ func newUploadCmd() *cobra.Command {
 			if err != nil {
 				return TranslateAPIError(err)
 			}
-			_, err = fmt.Fprint(cmd.OutOrStdout(), assetPath)
+			// Sanitize the upstream-controlled path before printing so a
+			// hostile/compromised API response cannot inject terminal control
+			// sequences into the user's TTY.
+			_, err = fmt.Fprint(cmd.OutOrStdout(), SanitizeForTerminal(assetPath))
 			return err
 		},
 	}

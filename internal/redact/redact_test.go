@@ -14,7 +14,9 @@ func TestAPIKey(t *testing.T) {
 		{name: "empty", in: "", want: ""},
 		{name: "one char", in: "x", want: "***"},
 		{name: "six chars masked entirely", in: "abcdef", want: "***"},
-		{name: "seven chars revealed", in: "abcdefg", want: "abc...defg"},
+		{name: "seven chars masked", in: "abcdefg", want: "***"},
+		{name: "ten chars masked (below threshold)", in: "abcdefghij", want: "***"},
+		{name: "eleven chars revealed", in: "abcdefghijk", want: "abc...hijk"},
 		{name: "long key", in: "sk-live-1234567890abcdef", want: "sk-...cdef"},
 		{name: "unicode key byte-indexed", in: "ＡＢＣ_efgh", want: "Ａ...efgh"},
 	}
