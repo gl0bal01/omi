@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: '1.26.3'
+          go-version: '1.27.1'
           cache: true
       - run: |
           out=$(gofmt -l .)
@@ -32,11 +32,11 @@ jobs:
       - run: go test ./...
       - run: go test -race ./...
       - if: runner.os == 'Linux'
-        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+        run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2 run
       - if: runner.os == 'Linux'
-        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.26.1 ./...
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...
       - if: runner.os == 'Linux'
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.3.0 ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
       - run: go build -ldflags "-s -w -X main.version=ci" -o bin/omi ./cmd/omi
         if: runner.os != 'Windows'
         shell: bash

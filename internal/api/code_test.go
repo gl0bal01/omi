@@ -31,7 +31,7 @@ func TestCode_RequestShape(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient("testkey", srv.URL, 5*time.Second)
-	text, err := c.Code(context.Background(), "gpt-5.1-codex", "fizzbuzz in go")
+	text, err := c.Code(context.Background(), "gpt-5.3-codex", "fizzbuzz in go")
 	if err != nil {
 		t.Fatalf("Code: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestCode_RequestShape(t *testing.T) {
 	if gotBody["type"] != "CODE_GENERATOR" {
 		t.Errorf("type=%v", gotBody["type"])
 	}
-	if gotBody["model"] != "gpt-5.1-codex" {
+	if gotBody["model"] != "gpt-5.3-codex" {
 		t.Errorf("model=%v", gotBody["model"])
 	}
 	po, ok := gotBody["promptObject"].(map[string]any)

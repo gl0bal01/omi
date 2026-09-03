@@ -193,7 +193,7 @@ run "completion powershell" 0 "$BIN" completion powershell
 section "capability + file-type errors (offline)"
 run "codex on chat (rejected)" 2 "$BIN" -m codex hello
 expect_stderr "chat reject text" 'does not support chat'
-run "mini -f image (rejected)" 2 "$BIN" -m mini -f "$PNG" "describe"
+run "codex -f image (rejected)" 2 "$BIN" -m codex -f "$PNG" "describe"
 expect_stderr "vision reject text" 'does not support vision'
 run "unsupported file ext"  2 "$BIN" -f "$BAD" "x"
 expect_stderr "unsupported text" 'unsupported file type'
@@ -272,7 +272,7 @@ fi
 
 section "live code (/api/features CODE_GENERATOR)"
 run "code default model" 0 "$BIN" code "one-line python that prints hi"
-run "code --code-model"  0 "$BIN" code --code-model gpt-5.1-codex "one-line bash echo hi"
+run "code --code-model"  0 "$BIN" code --code-model gpt-5.3-codex "one-line bash echo hi"
 
 # --- Tests: LIVE sessions ------------------------------------------------
 

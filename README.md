@@ -2,9 +2,9 @@
 
 A single static Go CLI for the [1min.ai](https://app.1min.ai) REST API — with a parallel multi-model **consensus panel**, **Unix-pipe composition**, and a **typed model registry** with per-model defaults.
 
-[![Go Version](https://img.shields.io/badge/go-1.26%2B-00ADD8?logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-v0.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/status-v0.2.0-brightgreen.svg)](CHANGELOG.md)
 
 ```sh
 omi consensus -m mini,claude,gemini-pro --synth-model best "Should we ship today?"
@@ -21,7 +21,7 @@ omi consensus -m mini,claude,gemini-pro --synth-model best "Should we ship today
 ## Features
 
 - **Streaming chat** over Server-Sent Events for sub-second first-token latency.
-- **Vision and document Q&A** via the unified `chat-with-ai` endpoint with image or PDF/text/markdown/docx attachments.
+- **Vision and document Q&A** via the unified `chat-with-ai` endpoint with image or PDF/text/docx attachments.
 - **Code generation** with a dedicated `omi code` subcommand and code-capable model aliases.
 - **Consensus mode** via `omi consensus`, an `omi` client-side feature that asks multiple chat models and synthesizes their answers.
 - **Audio transcription** via `omi transcribe`.
@@ -69,7 +69,7 @@ omi session clear research
 | Command                      | Purpose                                                       |
 |------------------------------|---------------------------------------------------------------|
 | `omi [prompt]`               | Chat (streaming SSE). Empty prompt + TTY enters REPL.         |
-| `omi -f <file> [prompt]`     | Vision (image) or document Q&A (pdf/txt/md/docx) via chat.    |
+| `omi -f <file> [prompt]`     | Vision (image) or document Q&A (pdf/txt/docx) via chat.       |
 | `omi code <prompt>`          | Code generation via `CODE_GENERATOR`.                         |
 | `omi consensus <prompt>`     | Ask a 3-model panel and synthesize a consensus locally.        |
 | `omi transcribe <audio>`     | Speech-to-text via `SPEECH_TO_TEXT`.                          |
@@ -140,28 +140,35 @@ Output columns are:
 
 | Alias                  | API id                            | Notes                              |
 |------------------------|-----------------------------------|------------------------------------|
-| `best`                 | `gpt-5-chat-latest`               | Best general chat quality.         |
+| `best`                 | `gpt-5.5`                         | Best general chat quality.         |
 | `mini`                 | `gpt-4o-mini`                     | Default chat model (cost/speed).   |
+| `gpt55-pro`            | `gpt-5.5-pro`                     | High-end reasoning.                |
+| `gpt56-sol`            | `gpt-5.6-sol`                     | GPT-5.6 family (also `gpt56-luna`, `gpt56-terra`). |
 | `gpt54`                | `gpt-5.4`                         | Strong general reasoning.          |
-| `gpt54-pro`            | `gpt-5.4-pro`                     | High-end reasoning.                |
 | `o3`                   | `o3`                              | Deep reasoning.                    |
-| `claude`               | `claude-sonnet-4-6`               | Great long-form synthesis.         |
+| `claude`               | `claude-sonnet-5`                 | Great long-form synthesis.         |
+| `claude-opus`          | `claude-opus-5`                   | Deep analysis.                     |
+| `claude-fable`         | `claude-fable-5`                  | Top-tier Anthropic model.          |
 | `gemini-pro`           | `gemini-3.1-pro-preview`          | Long-context + strong analysis.    |
+| `gemini35-flash`       | `gemini-3.5-flash`                | Fast Gemini.                       |
 | `deepseek`             | `deepseek-chat`                   | Fast, low-cost general chat.       |
+| `deepseek-v4`          | `deepseek-v4-pro`                 |                                    |
 | `grok`                 | `grok-4-0709`                     |                                    |
+| `grok46`               | `grok-4.6`                        | Latest Grok.                       |
+| `glm`                  | `glm-5.3`                         |                                    |
 | `sonar`                | `sonar-pro`                       | Auto web search, `numOfSite=5`.    |
 | `deep-research`        | `sonar-deep-research`             | Auto web search, `numOfSite=5`.    |
 | `qwen-max`             | `qwen3-max`                       |                                    |
+| `qwen37-max`           | `qwen3.7-max`                     |                                    |
 
 ### Code-only aliases
 
 | Alias            | API id                | Notes                                |
 |------------------|-----------------------|--------------------------------------|
-| `codex`          | `gpt-5.1-codex`       | Default code model.                  |
-| `codex-mini`     | `gpt-5.1-codex-mini`  | Faster/cheaper code generation.      |
-| `qwen-code`      | `qwen3-coder-plus`    | Strong alt for code-heavy prompts.   |
-| `qwen-code-fast` | `qwen3-coder-flash`   | Fast code-focused responses.         |
-| `grok-code`      | `grok-code-fast-1`    |                                      |
+| `codex`          | `gpt-5.3-codex`       | Default code model.                  |
+| `qwen-code`      | `qwen3.7-plus`        | Strong alt for code-heavy prompts.   |
+| `qwen-code-fast` | `qwen3.7-flash`       | Fast code-focused responses.         |
+| `grok-code`      | `grok-4.6`            |                                      |
 
 ### Vision-only aliases
 

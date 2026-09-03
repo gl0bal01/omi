@@ -15,7 +15,7 @@ General chat
 
 Code generation
   Default: ./bin/omi code "Implement ..."
-  Fast alt: ./bin/omi code --code-model codex-mini "..."
+  Fast alt: ./bin/omi code --code-model qwen-code-fast "..."
   Task preset: ./bin/omi --task code "Write tests for ..."
 
 3-model consensus (omi client-side feature)

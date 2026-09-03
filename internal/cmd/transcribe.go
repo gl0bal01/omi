@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -88,12 +87,12 @@ func newTranscribeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
-			cfg, apiKey, err := loadAPIKey()
+			_, apiKey, err := loadAPIKey()
 			if err != nil {
 				return err
 			}
 
-			resolved := resolveTranscribeModel(model, cfg.Model)
+			resolved := resolveTranscribeModel(model)
 			if runOpts.verbose {
 				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "omi: effective: endpoint=/api/features type=SPEECH_TO_TEXT model=%s\n", resolved)
 			}
@@ -185,15 +184,12 @@ func transcribeModelCompletion(cmd *cobra.Command, args []string, toComplete str
 	return out, cobra.ShellCompDirectiveNoFileComp
 }
 
-func resolveTranscribeModel(flag, fromCfg string) string {
+// resolveTranscribeModel picks the speech model from the -m flag only.
+// OMI_MODEL and config.model are chat models; feeding them to SPEECH_TO_TEXT
+// fails upstream, so they are deliberately not consulted here.
+func resolveTranscribeModel(flag string) string {
 	if flag != "" {
 		return resolveTranscribeAlias(flag)
-	}
-	if env := os.Getenv("OMI_MODEL"); env != "" {
-		return resolveTranscribeAlias(env)
-	}
-	if fromCfg != "" {
-		return resolveTranscribeAlias(fromCfg)
 	}
 	return defaultTranscribeModel
 }

@@ -1,4 +1,4 @@
-VERSION ?= 0.1.0
+VERSION ?= 0.2.0
 LDFLAGS := -s -w -X main.version=$(VERSION)
 GOFILES := $(shell find . -name '*.go' -not -path './vendor/*')
 
@@ -20,13 +20,13 @@ race:
 	go test -race ./...
 
 lint: fmt-check
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2 run
 
 security:
-	go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+	go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 ./...
 
 vuln:
-	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
 
 smoke: build
 	BIN=./bin/omi scripts/smoke.sh

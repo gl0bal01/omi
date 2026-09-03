@@ -36,7 +36,7 @@ func TestRunConsensus_QueriesPanelThenSynthesizes(t *testing.T) {
 		mu          sync.Mutex
 		gotModels   []string
 		synthPrompt string
-		synthModel  = "gpt-5-chat-latest"
+		synthModel  = "gpt-5.5"
 	)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/chat-with-ai" {
@@ -71,7 +71,7 @@ func TestRunConsensus_QueriesPanelThenSynthesizes(t *testing.T) {
 	prompt := synthPrompt
 	mu.Unlock()
 	sort.Strings(got)
-	wantModels := []string{"claude-sonnet-4-6", "gemini-3.1-pro-preview", "gpt-4o-mini", "gpt-5-chat-latest"}
+	wantModels := []string{"claude-sonnet-5", "gemini-3.1-pro-preview", "gpt-4o-mini", "gpt-5.5"}
 	if fmt.Sprint(got) != fmt.Sprint(wantModels) {
 		t.Fatalf("models=%v want=%v", got, wantModels)
 	}
@@ -81,12 +81,12 @@ func TestRunConsensus_QueriesPanelThenSynthesizes(t *testing.T) {
 	if result.Answers[0].Model != "mini" || result.Answers[1].Model != "claude" || result.Answers[2].Model != "gemini-pro" {
 		t.Fatalf("answer order not preserved: %+v", result.Answers)
 	}
-	for _, want := range []string{"ship it?", "[mini / gpt-4o-mini]", "[claude / claude-sonnet-4-6]", "Recommendation:"} {
+	for _, want := range []string{"ship it?", "[mini / gpt-4o-mini]", "[claude / claude-sonnet-5]", "Recommendation:"} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("synth prompt missing %q:\n%s", want, prompt)
 		}
 	}
-	if !strings.Contains(result.Synth.Answer, "answer from gpt-5-chat-latest") {
+	if !strings.Contains(result.Synth.Answer, "answer from gpt-5.5") {
 		t.Fatalf("synth=%q", result.Synth.Answer)
 	}
 }

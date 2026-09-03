@@ -55,7 +55,7 @@ func newRootCmd(version string) *cobra.Command {
 	cmd.Flags().StringVarP(&f.model, "model", "m", "", "chat model alias or id")
 	cmd.Flags().StringVar(&f.task, "task", "", "task preset for model selection (chat, code, vision, research)")
 	cmd.Flags().StringVarP(&f.session, "session", "s", "", "named session (persists conversation UUID)")
-	cmd.Flags().StringVarP(&f.file, "file", "f", "", "image (jpg/png/...) or document (pdf/txt/md/docx) attachment")
+	cmd.Flags().StringVarP(&f.file, "file", "f", "", "image (jpg/png/...) or document (pdf/txt/docx) attachment")
 	cmd.Flags().BoolVarP(&f.web, "web", "w", false, "enable web search")
 	cmd.Flags().BoolVar(&f.noWeb, "no-web", false, "disable web search")
 	cmd.Flags().BoolVarP(&f.mixed, "mixed", "M", false, "isMixed flag on promptObject")
@@ -205,17 +205,22 @@ func runChat(ctx context.Context, args []string, f *chatFlags) error {
 	req := buildChatRequest(modelID, convUUID, prompt, decision, f.mixed)
 
 	if hasFile {
-		assetPath, err := client.UploadAsset(ctx, f.file)
+		asset, err := client.UploadAssetInfo(ctx, f.file)
 		if err != nil {
 			return TranslateAPIError(err)
 		}
 		switch fileKindResolved {
 		case fileImage:
-			req.ImageList = []string{assetPath}
-			req.PromptObject.Attachments = &api.PromptAttachments{Images: []string{assetPath}}
+			req.ImageList = []string{asset.Path}
+			req.PromptObject.Attachments = &api.PromptAttachments{Images: []string{asset.Path}}
 		case fileDoc:
-			req.Files = []string{assetPath}
-			req.PromptObject.Attachments = &api.PromptAttachments{Files: []string{assetPath}}
+			// Upstream resolves documents by fileContent.uuid, not by asset path.
+			id := asset.UUID
+			if id == "" {
+				id = asset.Path
+			}
+			req.Files = []string{id}
+			req.PromptObject.Attachments = &api.PromptAttachments{Files: []string{id}}
 		}
 	}
 	logEffective(os.Stderr, decision, modelID, f, hasFile)
@@ -322,7 +327,7 @@ func resolveModelInputWithTask(flag, fromCfg, task string) (string, error) {
 	case "chat":
 		return "mini", nil
 	case "code":
-		return "gpt-5.1-codex", nil
+		return "gpt-5.3-codex", nil
 	case "vision":
 		return "qwen3-vl-plus", nil
 	case "research":

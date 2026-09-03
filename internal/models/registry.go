@@ -134,7 +134,9 @@ func resolveInternal(input string, required Capability, warnUnknown bool) (strin
 			return "", ModelDefaults{}, fmt.Errorf("omi: model '%s' does not support code generation (use 'omi models code')", input)
 		}
 	case CapVision:
-		if entry.Caps&CapVision == 0 {
+		// Chat models on chat-with-ai are multimodal; only code-only entries
+		// cannot take an image.
+		if entry.Caps == CapCode {
 			return "", ModelDefaults{}, fmt.Errorf("omi: model '%s' does not support vision", input)
 		}
 	case 0:

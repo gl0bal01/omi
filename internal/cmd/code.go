@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultCodeModel = "gpt-5.1-codex"
+const defaultCodeModel = "gpt-5.3-codex"
 
 func newCodeCmd() *cobra.Command {
 	var modelFlag string
@@ -45,7 +45,7 @@ func newCodeCmd() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVar(&modelFlag, "code-model", "", "code model alias or id (default gpt-5.1-codex)")
+	cmd.Flags().StringVar(&modelFlag, "code-model", "", "code model alias or id (default gpt-5.3-codex)")
 	_ = cmd.RegisterFlagCompletionFunc("code-model", codeModelCompletion)
 	return cmd
 }

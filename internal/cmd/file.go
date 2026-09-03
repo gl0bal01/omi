@@ -21,11 +21,11 @@ func detectFile(path string) (fileKind, error) {
 	switch ext {
 	case ".png", ".jpg", ".jpeg", ".gif", ".webp":
 		return fileImage, nil
-	case ".pdf", ".txt", ".md", ".docx":
+	case ".pdf", ".txt", ".docx":
 		return fileDoc, nil
 	case ".mp3", ".wav", ".m4a", ".ogg", ".flac", ".webm":
 		return fileAudio, nil
 	default:
-		return 0, fmt.Errorf("omi: unsupported file type: %s (expected image, pdf, txt, md, docx, audio)", ext)
+		return 0, fmt.Errorf("omi: unsupported file type: %s (expected image, pdf, txt, docx, audio; markdown is rejected upstream, rename to .txt)", ext)
 	}
 }

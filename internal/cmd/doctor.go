@@ -66,7 +66,7 @@ func newDoctorCmd() *cobra.Command {
 				failures++
 			}
 
-			transcribeInput := resolveTranscribeModel("", cfg.Model)
+			transcribeInput := resolveTranscribeModel("")
 			transcribeResolved := resolveTranscribeAlias(transcribeInput)
 			if isKnownTranscribeModel(transcribeResolved) {
 				checks = append(checks, doctorCheck{"transcribe_model", "PASS", fmt.Sprintf("%s -> %s", transcribeInput, transcribeResolved)})

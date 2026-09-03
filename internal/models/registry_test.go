@@ -27,7 +27,7 @@ func TestResolve_Embedded_AliasHits(t *testing.T) {
 		api   string
 	}{
 		{"mini", "gpt-4o-mini"},
-		{"codex", "gpt-5.1-codex"},
+		{"codex", "gpt-5.3-codex"},
 		{"pixtral", "pixtral-12b"},
 		{"sonar", "sonar-pro"},
 	}
@@ -152,10 +152,13 @@ func TestResolve_VisionOnly_RejectedOnChat(t *testing.T) {
 	}
 }
 
-func TestResolve_NonVision_RejectedAsVision(t *testing.T) {
+func TestResolve_CodeOnly_RejectedAsVision(t *testing.T) {
 	resetForTest(t)
 	defer resetForTest(t)
-	_, _, err := Resolve("mini", CapVision)
+	if _, _, err := Resolve("mini", CapVision); err != nil {
+		t.Fatalf("chat alias must accept images: %v", err)
+	}
+	_, _, err := Resolve("codex", CapVision)
 	if err == nil {
 		t.Fatalf("want error")
 	}
