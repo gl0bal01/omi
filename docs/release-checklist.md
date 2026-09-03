@@ -13,9 +13,9 @@ Use this checklist for every tagged `omi` release.
 ## Version And Tag
 
 ```sh
-VERSION=0.2.0 make verify
-git tag v0.2.0
-git push origin v0.2.0
+VERSION=0.3.0 make verify
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 ## Artifact Verification

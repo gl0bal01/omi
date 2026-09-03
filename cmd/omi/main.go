@@ -12,7 +12,7 @@ import (
 	"github.com/gl0bal01/omi/internal/cmd"
 )
 
-var version = "0.2.0"
+var version = "0.3.0"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

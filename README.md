@@ -4,7 +4,7 @@ A single static Go CLI for the [1min.ai](https://app.1min.ai) REST API — with 
 
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-v0.2.0-brightgreen.svg)](CHANGELOG.md)
+[![Status](https://img.shields.io/badge/status-v0.3.0-brightgreen.svg)](CHANGELOG.md)
 
 ```sh
 omi consensus -m mini,claude,gemini-pro --synth-model best "Should we ship today?"

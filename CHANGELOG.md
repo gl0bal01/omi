@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-03
 
 ### Fixed
 - Document Q&A (`-f file.pdf|txt|docx`) now passes the upload's `fileContent.uuid` in `attachments.files` instead of the asset path. Upstream resolves documents by UUID; with the path the model never saw the file content.
@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Model registry synced against the live 1min.ai catalog (2026-09-03). Repointed: `best` → `gpt-5.5`, `claude` → `claude-sonnet-5`, `claude-opus` → `claude-opus-5`, `codex` → `gpt-5.3-codex`, `qwen-code` → `qwen3.7-plus`, `qwen-code-fast` → `qwen3.7-flash`, `grok-code` → `grok-4.6`. Added: `gpt55`, `gpt55-pro`, `gpt56-luna|sol|terra`, `claude-fable`, `gemini35-flash`, `deepseek-v4`, `deepseek-v4-flash`, `grok43|45|46`, `glm`, `glm5`, `qwen36-plus|flash`, `qwen37-max|plus|flash`. Removed (no longer served): `codex-mini`, `gptoss`, `gptoss20`, `o4-mini`, `o4-mini-dr`, `o3-deep-research`, and every Claude 4.x alias (`claude4`, `claude45`, `claude46`, `claude-haiku`, `claude-opus4`, `claude-opus41`, `claude-opus45`, `claude-opus46`; `claude-opus-4-7/4-8` are listed in the catalog but rejected by the server).
 - `--task code` preset and `omi code` default now use `gpt-5.3-codex`.
-- Toolchain and deps bumped: Go 1.27.1 (go.mod + CI), `golang.org/x/term` 0.45.0, `golang.org/x/sys` 0.47.0, `spf13/pflag` 1.0.10, golangci-lint 2.13.2, gosec 2.29.0, govulncheck 1.7.0. Makefile `gosec`/`govulncheck` pinned instead of `@latest`.
-- `Makefile VERSION`, `main.go` default version, and README status badge aligned to 0.2.0 (they still said 0.1.0 after the v0.2.0 tag).
+- Toolchain and deps bumped: Go 1.27.1 (go.mod + CI), `golang.org/x/term` 0.45.0, `golang.org/x/sys` 0.47.0, `spf13/pflag` 1.0.10, golangci-lint 2.13.2, gosec 2.29.0, govulncheck 1.7.0. Makefile `gosec`/`govulncheck` pinned instead of `@latest`. GitHub Actions moved to Node 24 majors: checkout v7.0.1, setup-go v7.0.0, goreleaser-action v7.2.3 (SHA-pinned), goreleaser v2.18.0.
+- `Makefile VERSION`, `main.go` default version, and README status badge now track the release version (they still said 0.1.0 after the v0.2.0 tag).
 - `claude` aliases no longer carry `conversationType: code`, so plain chat with Claude no longer prints the "works best with omi code" hint.
 
 ## [0.2.0] - 2026-05-30

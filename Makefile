@@ -1,4 +1,4 @@
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 LDFLAGS := -s -w -X main.version=$(VERSION)
 GOFILES := $(shell find . -name '*.go' -not -path './vendor/*')
 
